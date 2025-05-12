@@ -29,8 +29,8 @@
         }
     </style>
     <!-- Подключение зависимостей -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
@@ -54,9 +54,9 @@
     </div>
 
     <script type="module">
-        // Импортируем функции Firebase
-        const { initializeApp } = firebase;
-        const { getAuth, GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged } = firebase.auth;
+        // Импортируем модули Firebase
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAuth, GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
         // Инициализация Firebase
         const firebaseConfig = {
@@ -75,6 +75,7 @@
 
         // Отслеживаем состояние авторизации
         onAuthStateChanged(auth, (user) => {
+            console.log('Auth state changed:', user);
             if (user) {
                 document.getElementById('message').textContent = `Вы вошли как: ${user.displayName} (${user.uid})`;
                 document.getElementById('logout').style.display = 'block';
@@ -87,13 +88,15 @@
         // Обработка ответа от Google Sign-In
         window.handleCredentialResponse = async (response) => {
             try {
+                console.log('Google Sign-In Response:', response);
                 const idToken = response.credential;
                 const credential = GoogleAuthProvider.credential(idToken);
-                await signInWithCredential(auth, credential);
+                const result = await signInWithCredential(auth, credential);
+                console.log('Sign-in result:', result);
                 document.getElementById('message').textContent = 'Вход выполнен!';
             } catch (error) {
                 document.getElementById('message').textContent = `Ошибка: ${error.message}`;
-                console.error('Ошибка:', error);
+                console.error('Ошибка входа:', error);
             }
         };
 
