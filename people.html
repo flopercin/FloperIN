@@ -16,14 +16,6 @@
             font-family: Arial, sans-serif;
             color: #fff;
         }
-        .header {
-            position: absolute;
-            top: 20px;
-            font-size: 36px;
-            font-weight: bold;
-            width: 100%;
-            text-align: center;
-        }
         .container {
             flex: 1;
             margin: 20px;
@@ -31,7 +23,7 @@
             text-align: center;
             max-width: 400px;
             width: 100%;
-            margin-bottom: 60px; /* Учитываем высоту навигационной панели */
+            margin-bottom: 60px;
         }
         .search-bar {
             display: flex;
@@ -108,9 +100,7 @@
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
 </head>
 <body>
-    <div class="header">FloperIN</div>
     <div class="container">
-        <h2>Люди</h2>
         <div class="search-bar">
             <input type="text" id="search-input" placeholder="Поиск по Username">
             <button onclick="searchUsers()"><i class="fas fa-search"></i></button>
@@ -125,9 +115,10 @@
         <button title="Поиск"><i class="fas fa-search"></i></button>
         <button class="active" title="Люди"><i class="fas fa-users"></i></button>
         <button title="Магазин"><i class="fas fa-store"></i></button>
+        <button title="Чаты"><i class="fas fa-comments"></i></button>
         <button title="Профиль" onclick="window.location.href='user-profile.html'"><i class="fas fa-user"></i></button>
         <button title="Настройки"><i class="fas fa-cog"></i></button>
-        <button title="Уведомления"><i class="fas fa-bell"></i></button>
+        <button title="Уведомления" onclick="window.location.href='notifications.html'"><i class="fas fa-bell"></i></button>
     </div>
 
     <script type="module">
@@ -151,12 +142,8 @@
         let currentUserUid = null;
 
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentUserUid = user.uid;
-                await loadUsers();
-            } else {
-                window.location.href = 'login.html';
-            }
+            currentUserUid = user ? user.uid : null;
+            await loadUsers();
         });
 
         async function loadUsers(searchUsername = '') {
@@ -185,12 +172,12 @@
                         userItem.classList.add('disabled');
                         userItem.innerHTML = `
                             <img src="${userData.profilePicUrl || 'https://via.placeholder.com/40'}" alt="Фото">
-                            <span>${userData.username} (Это вы)</span>
+                            <span>${userData.nickname || 'Без имени'}\n@${userData.username || 'Нет Username'}</span>
                         `;
                     } else {
                         userItem.innerHTML = `
                             <img src="${userData.profilePicUrl || 'https://via.placeholder.com/40'}" alt="Фото">
-                            <span>${userData.username}</span>
+                            <span>${userData.nickname || 'Без имени'}\n@${userData.username || 'Нет Username'}</span>
                         `;
                         userItem.onclick = () => window.location.href = `public-profile.html?uid=${userData.uid}`;
                     }
