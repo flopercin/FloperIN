@@ -11,8 +11,6 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
             background-color: #000;
             font-family: Arial, sans-serif;
             color: #fff;
@@ -22,14 +20,37 @@
             top: 20px;
             font-size: 36px;
             font-weight: bold;
+            width: 100%;
+            text-align: center;
         }
         .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             border: 2px solid #fff;
+            margin: 20px;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
             max-width: 400px;
             width: 100%;
+        }
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: #333;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        .nav-bar button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
         }
     </style>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
@@ -41,6 +62,14 @@
         <h2>Главная страница</h2>
         <p>Пока здесь ничего нет.</p>
         <button onclick="logout()">Выйти</button>
+    </div>
+    <div class="nav-bar">
+        <button title="Главное меню">🏠</button>
+        <button title="Поиск">🔍</button>
+        <button title="Люди">👥</button>
+        <button title="Магазин">🛒</button>
+        <button title="Настройки">⚙️</button>
+        <button title="Уведомления">🔔</button>
     </div>
 
     <script type="module">
@@ -62,7 +91,6 @@
 
         onAuthStateChanged(auth, (user) => {
             if (!user) {
-                // Если пользователь не авторизован, возвращаем на страницу входа
                 window.location.href = 'index.html';
             }
         });
