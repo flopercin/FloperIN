@@ -28,10 +28,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            border: 2px solid #fff;
             margin: 20px;
             padding: 20px;
-            border-radius: 10px;
             text-align: center;
             max-width: 400px;
             width: 100%;
@@ -47,10 +45,19 @@
         }
         .nav-bar button {
             background: none;
-            border: none;
+            border: 2px solid #fff;
+            border-radius: 5px;
             color: #fff;
-            font-size: 24px;
+            font-size: 16px;
+            padding: 5px 10px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .nav-bar button.active {
+            background-color: #fff;
+            color: #000;
         }
     </style>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
@@ -59,22 +66,21 @@
 <body>
     <div class="header">FloperIN</div>
     <div class="container">
-        <h2>Главная страница</h2>
-        <p>Пока здесь ничего нет.</p>
-        <button onclick="logout()">Выйти</button>
+        <!-- Убрали текст "Главная страница" -->
     </div>
     <div class="nav-bar">
-        <button title="Главное меню">🏠</button>
-        <button title="Поиск">🔍</button>
-        <button title="Люди">👥</button>
-        <button title="Магазин">🛒</button>
-        <button title="Настройки">⚙️</button>
-        <button title="Уведомления">🔔</button>
+        <button class="active" title="Главное меню"><span>🏠</span> Меню</button>
+        <button title="Поиск"><span>🔍</span> Поиск</button>
+        <button title="Люди"><span>👥</span> Люди</button>
+        <button title="Магазин"><span>🛒</span> Магазин</button>
+        <button title="Профиль" onclick="window.location.href='user-profile.html'"><span>👤</span> Профиль</button>
+        <button title="Настройки"><span>⚙️</span> Настройки</button>
+        <button title="Уведомления"><span>🔔</span> Уведомления</button>
     </div>
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-        import { getAuth, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
@@ -94,16 +100,6 @@
                 window.location.href = 'index.html';
             }
         });
-
-        window.logout = function() {
-            signOut(auth)
-                .then(() => {
-                    window.location.href = 'index.html';
-                })
-                .catch((error) => {
-                    alert('Ошибка при выходе: ' + error.message);
-                });
-        };
     </script>
 </body>
 </html>
