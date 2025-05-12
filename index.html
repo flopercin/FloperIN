@@ -3,10 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой сайт</title>
+    <title>Факты о котах</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        #fact {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Добро пожаловать на мой сайт!</h1>
-    <p>Это мой первый сайт на GitHub Pages.</p>
+    <h1>Узнай факт о котах!</h1>
+    <button onclick="getCatFact()">Получить факт</button>
+    <p id="fact">Нажми кнопку для факта!</p>
+
+    <script>
+        async function getCatFact() {
+            try {
+                const response = await fetch('https://cat-fact.herokuapp.com/facts/random');
+                const data = await response.json();
+                document.getElementById('fact').textContent = data.text;
+            } catch (error) {
+                document.getElementById('fact').textContent = 'Ошибка при загрузке факта :(';
+                console.error(error);
+            }
+        }
+    </script>
+</nav>
 </body>
 </html>
