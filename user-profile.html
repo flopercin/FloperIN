@@ -100,6 +100,7 @@
     <div class="container">
         <div class="profile-info">
             <h2>Профиль</h2>
+            <p>Username: <span id="username"></span></p>
             <img id="profile-pic" src="" alt="Фото профиля">
             <input type="text" id="profile-pic-url" placeholder="URL фото профиля" oninput="updateImagePreview()">
             <input type="text" id="nickname" placeholder="Ник">
@@ -147,6 +148,7 @@
                     const userDoc = await getDoc(userDocRef);
                     if (userDoc.exists()) {
                         const data = userDoc.data();
+                        document.getElementById('username').textContent = data.username || 'Нет имени';
                         document.getElementById('nickname').value = data.nickname || user.displayName || '';
                         const profilePicUrl = data.profilePicUrl || user.photoURL || 'https://via.placeholder.com/100';
                         document.getElementById('profile-pic').src = profilePicUrl;
@@ -161,8 +163,8 @@
                     alert('Ошибка при загрузке профиля: ' + error.message);
                 }
             } else {
-                console.log('No user, redirecting to index.html');
-                window.location.href = 'index.html';
+                console.log('No user, redirecting to login.html');
+                window.location.href = 'login.html';
             }
         });
 
@@ -186,12 +188,15 @@
 
                 try {
                     console.log('Saving to Firestore');
-                    await setDoc(doc(db, 'users', user.uid), {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    await setDoc(userDocRef, {
+                        username: userDoc.exists() ? userDoc.data().username : '', // Сохраняем существующий Username
                         nickname: nickname || user.displayName,
                         profilePicUrl: profilePicUrl,
                         description: description || '',
                         uid: user.uid
-                    });
+                    }, { merge: true });
                     console.log('Profile saved');
                     alert('Профиль успешно обновлён!');
                 } catch (error) {
@@ -208,7 +213,7 @@
             signOut(auth)
                 .then(() => {
                     console.log('User signed out');
-                    window.location.href = 'index.html';
+                    window.location.href = 'login.html';
                 })
                 .catch((error) => {
                     console.error('Error signing out:', error);
