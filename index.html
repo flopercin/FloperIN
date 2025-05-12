@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Система регистрации</title>
+    <title>Вход через Google</title>
     <style>
         body {
             margin: 0;
@@ -24,33 +24,41 @@
             max-width: 300px;
             width: 100%;
         }
-        input, button {
-            display: block;
-            margin: 10px auto;
-            padding: 5px;
-            width: 80%;
-        }
         #message {
             margin-top: 10px;
         }
     </style>
+    <!-- Подключение зависимостей -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
     <div class="container">
-        <h2>Регистрация</h2>
-        <input type="text" id="username" placeholder="Ник">
-        <input type="password" id="password" placeholder="Пароль">
-        <button onclick="register()">Зарегистрироваться</button>
-        <button onclick="login()">Войти</button>
+        <h2>Вход через Google</h2>
+        <div id="g_id_onload"
+             data-client_id="985228405854-561fhpkr20p2ttgc0uiampomks1rf87m.apps.googleusercontent.com"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin" 
+             data-type="standard" 
+             data-size="large" 
+             data-theme="outline" 
+             data-text="sign_in_with" 
+             data-shape="rectangular" 
+             data-logo_alignment="left">
+        </div>
         <button onclick="logout()" id="logout" style="display:none;">Выйти</button>
         <p id="message"></p>
     </div>
 
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-        import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+        // Импортируем функции Firebase
+        const { initializeApp } = firebase;
+        const { getAuth, GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged } = firebase.auth;
 
+        // Инициализация Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
             authDomain: "floperin-559d7.firebaseapp.com",
@@ -63,11 +71,12 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
 
+        // Отслеживаем состояние авторизации
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                document.getElementById('message').textContent = `Вы вошли как: ${user.uid}`;
+                document.getElementById('message').textContent = `Вы вошли как: ${user.displayName} (${user.uid})`;
                 document.getElementById('logout').style.display = 'block';
             } else {
                 document.getElementById('message').textContent = 'Вы не вошли';
@@ -75,50 +84,20 @@
             }
         });
 
-        window.register = async function() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            if (username && password) {
-                try {
-                    const userRef = doc(db, 'users', username);
-                    const userDoc = await getDoc(userRef);
-                    if (userDoc.exists()) {
-                        document.getElementById('message').textContent = 'Этот ник уже занят!';
-                        return;
-                    }
-
-                    const email = `${username}@floperin.local`;
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    await setDoc(userRef, { password: password });
-                    document.getElementById('message').textContent = 'Регистрация успешна!';
-                    document.getElementById('username').value = '';
-                    document.getElementById('password').value = '';
-                } catch (error) {
-                    document.getElementById('message').textContent = `Ошибка: ${error.message}`;
-                }
-            } else {
-                document.getElementById('message').textContent = 'Заполните все поля!';
+        // Обработка ответа от Google Sign-In
+        window.handleCredentialResponse = async (response) => {
+            try {
+                const idToken = response.credential;
+                const credential = GoogleAuthProvider.credential(idToken);
+                await signInWithCredential(auth, credential);
+                document.getElementById('message').textContent = 'Вход выполнен!';
+            } catch (error) {
+                document.getElementById('message').textContent = `Ошибка: ${error.message}`;
+                console.error('Ошибка:', error);
             }
         };
 
-        window.login = async function() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-
-            if (username && password) {
-                try {
-                    const email = `${username}@floperin.local`;
-                    await signInWithEmailAndPassword(auth, email, password);
-                    document.getElementById('message').textContent = 'Вход выполнен!';
-                } catch (error) {
-                    document.getElementById('message').textContent = `Ошибка: ${error.message}`;
-                }
-            } else {
-                document.getElementById('message').textContent = 'Заполните все поля!';
-            }
-        };
-
+        // Функция выхода
         window.logout = function() {
             signOut(auth)
                 .then(() => {
