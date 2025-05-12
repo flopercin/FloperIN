@@ -28,7 +28,6 @@
             margin-top: 10px;
         }
     </style>
-    <!-- Подключение зависимостей -->
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
@@ -37,7 +36,7 @@
     <div class="container">
         <h2>Вход через Google</h2>
         <div id="g_id_onload"
-             data-client_id="985228405854-561fhpkr20p2ttgc0uiampomks1rf87m.apps.googleusercontent.com"
+             data-client_id="313128941793-nt4aclh5pca02d3p651v9r8fb3cqtsdh.apps.googleusercontent.com"
              data-callback="handleCredentialResponse"
              data-auto_prompt="false">
         </div>
@@ -54,11 +53,9 @@
     </div>
 
     <script type="module">
-        // Импортируем модули Firebase
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
         import { getAuth, GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-        // Инициализация Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
             authDomain: "floperin-559d7.firebaseapp.com",
@@ -73,7 +70,6 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
-        // Отслеживаем состояние авторизации
         onAuthStateChanged(auth, (user) => {
             console.log('Auth state changed:', user);
             if (user) {
@@ -85,7 +81,6 @@
             }
         });
 
-        // Обработка ответа от Google Sign-In
         window.handleCredentialResponse = async (response) => {
             try {
                 console.log('Google Sign-In Response:', response);
@@ -100,7 +95,6 @@
             }
         };
 
-        // Функция выхода
         window.logout = function() {
             signOut(auth)
                 .then(() => {
