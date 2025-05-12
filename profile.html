@@ -47,7 +47,6 @@
             border-radius: 50%;
             margin: 10px auto;
             display: block;
-            cursor: pointer;
         }
         button {
             padding: 5px 20px;
@@ -61,14 +60,13 @@
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js"></script>
 </head>
 <body>
     <div class="header">FloperIN</div>
     <div class="container">
         <h2>Настройка профиля</h2>
-        <img id="profile-pic" src="" alt="Фото профиля" onclick="document.getElementById('file-input').click()">
-        <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="previewImage(event)">
+        <img id="profile-pic" src="" alt="Фото профиля">
+        <input type="text" id="profile-pic-url" placeholder="URL фото профиля" oninput="updateImagePreview()">
         <input type="text" id="nickname" placeholder="Ник">
         <textarea id="description" placeholder="Описание"></textarea>
         <button onclick="saveProfile()">Сохранить</button>
@@ -78,7 +76,6 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
         import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
@@ -93,67 +90,74 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const storage = getStorage(app);
-
-        let selectedFile = null;
 
         onAuthStateChanged(auth, async (user) => {
+            console.log('Auth state changed:', user);
             if (user) {
+                console.log('User UID:', user.uid);
                 // Загружаем данные из Google
                 document.getElementById('nickname').value = user.displayName || '';
-                document.getElementById('profile-pic').src = user.photoURL || '';
+                const defaultPicUrl = user.photoURL || 'https://via.placeholder.com/100';
+                document.getElementById('profile-pic').src = defaultPicUrl;
+                document.getElementById('profile-pic-url').value = defaultPicUrl;
                 document.getElementById('description').value = '';
 
                 // Проверяем, есть ли уже профиль в Firestore
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    window.location.href = 'main.html';
+                try {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        console.log('Profile exists, redirecting to main.html');
+                        window.location.href = 'main.html';
+                    } else {
+                        console.log('Profile does not exist, staying on profile.html');
+                    }
+                } catch (error) {
+                    console.error('Error checking profile:', error);
+                    alert('Ошибка при проверке профиля: ' + error.message);
                 }
             } else {
+                console.log('No user, redirecting to index.html');
                 window.location.href = 'index.html';
             }
         });
 
-        window.previewImage = function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                selectedFile = file;
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('profile-pic').src = e.target.result;
-                };
-                reader.readAsDataURL(file);
+        window.updateImagePreview = function() {
+            const url = document.getElementById('profile-pic-url').value;
+            console.log('Updating image preview with URL:', url);
+            if (url) {
+                document.getElementById('profile-pic').src = url;
+            } else {
+                document.getElementById('profile-pic').src = 'https://via.placeholder.com/100';
             }
         };
 
         window.saveProfile = async function() {
             const user = auth.currentUser;
             if (user) {
+                console.log('Saving profile for user:', user.uid);
                 const nickname = document.getElementById('nickname').value;
                 const description = document.getElementById('description').value;
-                let profilePicUrl = user.photoURL;
-
-                // Если выбрано новое изображение, загружаем его в Storage
-                if (selectedFile) {
-                    const storageRef = ref(storage, `profile-pics/${user.uid}`);
-                    await uploadBytes(storageRef, selectedFile);
-                    profilePicUrl = await getDownloadURL(storageRef);
-                }
+                const profilePicUrl = document.getElementById('profile-pic-url').value || user.photoURL || 'https://via.placeholder.com/100';
 
                 // Сохраняем данные в Firestore
                 try {
+                    console.log('Saving to Firestore');
                     await setDoc(doc(db, 'users', user.uid), {
                         nickname: nickname || user.displayName,
-                        profilePicUrl: profilePicUrl || user.photoURL,
+                        profilePicUrl: profilePicUrl,
                         description: description || '',
                         uid: user.uid
                     });
+                    console.log('Profile saved, redirecting to main.html');
                     window.location.href = 'main.html';
                 } catch (error) {
-                    console.error('Ошибка сохранения профиля:', error);
+                    console.error('Error saving profile:', error);
                     alert('Ошибка при сохранении профиля: ' + error.message);
                 }
+            } else {
+                console.log('No user found for saving profile');
+                alert('Пользователь не авторизован');
             }
         };
     </script>
