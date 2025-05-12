@@ -50,11 +50,12 @@
         }
         button {
             padding: 5px 20px;
-            background-color: #fff;
-            color: #000;
-            border: none;
+            background: none;
+            color: #fff;
+            border: 2px solid #fff;
             border-radius: 5px;
             cursor: pointer;
+            margin: 10px;
         }
     </style>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
@@ -95,30 +96,32 @@
             console.log('Auth state changed:', user);
             if (user) {
                 console.log('User UID:', user.uid);
+                // Проверяем, есть ли Username
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (!userDoc.exists() || !userDoc.data().username) {
+                    window.location.href = 'set-username.html';
+                    return;
+                }
+
+                // Если Username есть, загружаем данные профиля
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    if (data.nickname && data.profilePicUrl && data.description !== undefined) {
+                        window.location.href = 'main.html';
+                        return;
+                    }
+                }
+
                 // Загружаем данные из Google
                 document.getElementById('nickname').value = user.displayName || '';
                 const defaultPicUrl = user.photoURL || 'https://via.placeholder.com/100';
                 document.getElementById('profile-pic').src = defaultPicUrl;
                 document.getElementById('profile-pic-url').value = defaultPicUrl;
                 document.getElementById('description').value = '';
-
-                // Проверяем, есть ли уже профиль в Firestore
-                try {
-                    const userDocRef = doc(db, 'users', user.uid);
-                    const userDoc = await getDoc(userDocRef);
-                    if (userDoc.exists()) {
-                        console.log('Profile exists, redirecting to main.html');
-                        window.location.href = 'main.html';
-                    } else {
-                        console.log('Profile does not exist, staying on profile.html');
-                    }
-                } catch (error) {
-                    console.error('Error checking profile:', error);
-                    alert('Ошибка при проверке профиля: ' + error.message);
-                }
             } else {
-                console.log('No user, redirecting to index.html');
-                window.location.href = 'index.html';
+                console.log('No user, redirecting to login.html');
+                window.location.href = 'login.html';
             }
         });
 
@@ -140,15 +143,17 @@
                 const description = document.getElementById('description').value;
                 const profilePicUrl = document.getElementById('profile-pic-url').value || user.photoURL || 'https://via.placeholder.com/100';
 
-                // Сохраняем данные в Firestore
                 try {
                     console.log('Saving to Firestore');
-                    await setDoc(doc(db, 'users', user.uid), {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    await setDoc(userDocRef, {
                         nickname: nickname || user.displayName,
                         profilePicUrl: profilePicUrl,
                         description: description || '',
-                        uid: user.uid
-                    });
+                        uid: user.uid,
+                        username: userDoc.exists() ? userDoc.data().username : '' // Сохраняем существующий Username
+                    }, { merge: true });
                     console.log('Profile saved, redirecting to main.html');
                     window.location.href = 'main.html';
                 } catch (error) {
