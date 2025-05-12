@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Главная страница</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+        .header {
+            position: absolute;
+            top: 20px;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        .container {
+            border: 2px solid #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+    </style>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+</head>
+<body>
+    <div class="header">FloperIN</div>
+    <div class="container">
+        <h2>Главная страница</h2>
+        <p>Пока здесь ничего нет.</p>
+        <button onclick="logout()">Выйти</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAuth, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
+            authDomain: "floperin-559d7.firebaseapp.com",
+            projectId: "floperin-559d7",
+            storageBucket: "floperin-559d7.firebasestorage.app",
+            messagingSenderId: "313128941793",
+            appId: "1:313128941793:web:2a33815852477fa136dfa0",
+            measurementId: "G-LCZJLT5JJE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                // Если пользователь не авторизован, возвращаем на страницу входа
+                window.location.href = 'index.html';
+            }
+        });
+
+        window.logout = function() {
+            signOut(auth)
+                .then(() => {
+                    window.location.href = 'index.html';
+                })
+                .catch((error) => {
+                    alert('Ошибка при выходе: ' + error.message);
+                });
+        };
+    </script>
+</body>
+</html>
