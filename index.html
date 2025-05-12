@@ -3,36 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Факты о котах</title>
+    <title>Информация о пользователе</title>
     <style>
         body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
             font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 50px;
+            color: #fff;
         }
-        #fact {
-            margin-top: 20px;
+        .info-box {
+            border: 2px solid #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 300px;
+            width: 100%;
+        }
+        .info-box p {
+            margin: 10px 0;
             font-size: 18px;
         }
     </style>
 </head>
 <body>
-    <h1>Узнай факт о котах!</h1>
-    <button onclick="getCatFact()">Получить факт</button>
-    <p id="fact">Нажми кнопку для факта!</p>
+    <div class="info-box">
+        <h2>Информация о вас</h2>
+        <p id="country">Страна: Загрузка...</p>
+        <p id="language">Язык браузера: Загрузка...</p>
+        <p id="timezone">Часовой пояс: Загрузка...</p>
+    </div>
 
     <script>
-        async function getCatFact() {
+        // Получаем информацию о стране через ipapi.co
+        async function getUserInfo() {
             try {
-                const response = await fetch('https://meowfacts.herokuapp.com/');
-                if (!response.ok) throw new Error('Ошибка сети: ' + response.status);
+                const response = await fetch('https://ipapi.co/json/');
                 const data = await response.json();
-                document.getElementById('fact').textContent = data.data[0]; // Факт находится в data.data[0]
+
+                // Страна
+                const country = data.country_name || 'Не удалось определить';
+                const countryCode = data.country || '🏳️';
+                document.getElementById('country').textContent = `Страна: ${country} �${countryCode}`;
+
+                // Язык браузера
+                const language = navigator.language || 'Не удалось определить';
+                document.getElementById('language').textContent = `Язык браузера: ${language}`;
+
+                // Часовой пояс
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Не удалось определить';
+                document.getElementById('timezone').textContent = `Часовой пояс: ${timezone}`;
             } catch (error) {
-                document.getElementById('fact').textContent = 'Ошибка при загрузке факта :(';
+                document.getElementById('country').textContent = 'Страна: Ошибка загрузки';
+                document.getElementById('language').textContent = 'Язык браузера: Ошибка';
+                document.getElementById('timezone').textContent = 'Часовой пояс: Ошибка';
                 console.error('Ошибка:', error);
             }
         }
+
+        // Вызываем функцию при загрузке страницы
+        window.onload = getUserInfo;
     </script>
 </body>
 </html>
