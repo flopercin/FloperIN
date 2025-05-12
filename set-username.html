@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Выбор Username</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+        .header {
+            position: absolute;
+            top: 20px;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        .container {
+            border: 2px solid #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 300px;
+            width: 100%;
+        }
+        input {
+            display: block;
+            margin: 10px auto;
+            padding: 5px;
+            width: 80%;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #fff;
+            border-radius: 5px;
+        }
+        button {
+            padding: 5px 20px;
+            background: none;
+            color: #fff;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        #message {
+            margin-top: 10px;
+        }
+    </style>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+</head>
+<body>
+    <div class="header">FloperIN</div>
+    <div class="container">
+        <h2>Выберите Username</h2>
+        <input type="text" id="username" placeholder="Username (от 4 символов)">
+        <button onclick="saveUsername()">Сохранить</button>
+        <p id="message"></p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
+            authDomain: "floperin-559d7.firebaseapp.com",
+            projectId: "floperin-559d7",
+            storageBucket: "floperin-559d7.firebasestorage.app",
+            messagingSenderId: "313128941793",
+            appId: "1:313128941793:web:2a33815852477fa136dfa0",
+            measurementId: "G-LCZJLT5JJE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists() && userDoc.data().username) {
+                    window.location.href = 'main.html';
+                }
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        window.saveUsername = async function() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('Пользователь не авторизован');
+                return;
+            }
+
+            const usernameInput = document.getElementById('username').value.trim();
+            const message = document.getElementById('message');
+
+            // Проверка длины
+            if (usernameInput.length < 4) {
+                message.textContent = 'Username должен быть минимум 4 символа';
+                return;
+            }
+
+            // Проверка уникальности
+            const usernamesRef = collection(db, 'usernames');
+            const q = query(usernamesRef, where('username', '==', usernameInput));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                message.textContent = 'Этот Username уже занят';
+                return;
+            }
+
+            try {
+                // Сохраняем Username в коллекции users
+                const userDocRef = doc(db, 'users', user.uid);
+                await setDoc(userDocRef, { username: usernameInput }, { merge: true });
+
+                // Сохраняем Username в отдельной коллекции usernames для проверки уникальности
+                await setDoc(doc(db, 'usernames', usernameInput), {
+                    uid: user.uid,
+                    username: usernameInput
+                });
+
+                window.location.href = 'profile.html';
+            } catch (error) {
+                console.error('Error saving username:', error);
+                message.textContent = 'Ошибка: ' + error.message;
+            }
+        };
+    </script>
+</body>
+</html>
