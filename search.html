@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+        .container {
+            flex: 1;
+            margin: 20px;
+            padding: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            margin-bottom: 60px;
+        }
+        .search-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .search-bar input {
+            flex: 1;
+            padding: 5px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #fff;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        .search-bar button {
+            background: none;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            color: #fff;
+            padding: 5px;
+            cursor: pointer;
+        }
+        .filter-bar {
+            margin-bottom: 20px;
+        }
+        .filter-bar select {
+            padding: 5px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #fff;
+            border-radius: 5px;
+        }
+        .result-list {
+            border: 2px solid #fff;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .result-item {
+            padding: 10px;
+            border-bottom: 1px solid #fff;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: #333;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        .nav-bar button {
+            background: none;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 20px;
+            padding: 8px;
+            cursor: pointer;
+        }
+        .nav-bar button.active {
+            background-color: #fff;
+            color: #000;
+        }
+    </style>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="Поиск">
+            <button onclick="search()"><i class="fas fa-search"></i></button>
+            <button onclick="resetSearch()" style="display:none;" id="clear-search"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="filter-bar">
+            <select id="filter-select" onchange="search()">
+                <option value="people">Люди</option>
+                <option value="posts">Посты</option>
+                <option value="groups">Группы</option>
+                <option value="channels">Каналы</option>
+            </select>
+        </div>
+        <div class="result-list" id="result-list">
+            <!-- Результаты -->
+        </div>
+    </div>
+    <div class="nav-bar">
+        <button title="Главное меню" onclick="window.location.href='main.html'"><i class="fas fa-home"></i></button>
+        <button class="active" title="Поиск"><i class="fas fa-search"></i></button>
+        <button title="Магазин"><i class="fas fa-store"></i></button>
+        <button title="Чаты"><i class="fas fa-comments"></i></button>
+        <button title="Профиль" onclick="window.location.href='user-profile.html'"><i class="fas fa-user"></i></button>
+        <button title="Настройки"><i class="fas fa-cog"></i></button>
+        <button title="Уведомления" onclick="window.location.href='notifications.html'"><i class="fas fa-bell"></i></button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getFirestore, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
+            authDomain: "floperin-559d7.firebaseapp.com",
+            projectId: "floperin-559d7",
+            storageBucket: "floperin-559d7.firebasestorage.app",
+            messagingSenderId: "313128941793",
+            appId: "1:313128941793:web:2a33815852477fa136dfa0",
+            measurementId: "G-LCZJLT5JJE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        let currentUserUid = null;
+
+        onAuthStateChanged(auth, (user) => {
+            currentUserUid = user ? user.uid : null;
+            search();
+        });
+
+        async function search() {
+            const searchInput = document.getElementById('search-input').value.trim();
+            const filter = document.getElementById('filter-select').value;
+            document.getElementById('clear-search').style.display = searchInput ? 'block' : 'none';
+            const resultList = document.getElementById('result-list');
+            resultList.innerHTML = '';
+
+            try {
+                if (filter === 'people') {
+                    let usersQuery = collection(db, 'users');
+                    if (searchInput) {
+                        usersQuery = query(usersQuery, where('username', '==', searchInput));
+                    }
+                    const querySnapshot = await getDocs(usersQuery);
+                    if (querySnapshot.empty) {
+                        resultList.innerHTML = '<p>Пользователи не найдены</p>';
+                        return;
+                    }
+                    querySnapshot.forEach((doc) => {
+                        const userData = doc.data();
+                        const item = document.createElement('div');
+                        item.classList.add('result-item');
+                        item.innerHTML = `
+                            ${userData.nickname || 'Без имени'}\n@${userData.username || 'Нет Username'}
+                            <button onclick="window.location.href='public-profile.html?uid=${userData.uid}'">Просмотр</button>
+                        `;
+                        resultList.appendChild(item);
+                    });
+                } else {
+                    resultList.innerHTML = `<p>Функция "${filter}" пока не реализована</p>`;
+                }
+            } catch (error) {
+                console.error('Error searching:', error);
+                resultList.innerHTML = '<p>Ошибка поиска</p>';
+            }
+        }
+
+        window.resetSearch = function() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('clear-search').style.display = 'none';
+            search();
+        };
+    </script>
+</body>
+</html>
