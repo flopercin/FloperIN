@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройка профиля</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+        .header {
+            position: absolute;
+            top: 20px;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        .container {
+            border: 2px solid #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        input, textarea {
+            display: block;
+            margin: 10px auto;
+            padding: 5px;
+            width: 80%;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #fff;
+            border-radius: 5px;
+        }
+        img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 10px auto;
+            display: block;
+        }
+        button {
+            padding: 5px 20px;
+            background-color: #fff;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+</head>
+<body>
+    <div class="header">FloperIN</div>
+    <div class="container">
+        <h2>Настройка профиля</h2>
+        <img id="profile-pic" src="" alt="Фото профиля">
+        <input type="text" id="nickname" placeholder="Ник">
+        <input type="text" id="profile-pic-url" placeholder="URL фото профиля">
+        <textarea id="description" placeholder="Описание"></textarea>
+        <button onclick="saveProfile()">Сохранить</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
+            authDomain: "floperin-559d7.firebaseapp.com",
+            projectId: "floperin-559d7",
+            storageBucket: "floperin-559d7.firebasestorage.app",
+            messagingSenderId: "313128941793",
+            appId: "1:313128941793:web:2a33815852477fa136dfa0",
+            measurementId: "G-LCZJLT5JJE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Загружаем данные из Google
+                document.getElementById('nickname').value = user.displayName || '';
+                document.getElementById('profile-pic').src = user.photoURL || '';
+                document.getElementById('profile-pic-url').value = user.photoURL || '';
+
+                // Проверяем, есть ли уже профиль в Firestore
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    // Если профиль уже есть, перенаправляем на главную страницу
+                    window.location.href = 'main.html';
+                }
+            } else {
+                // Если пользователь не авторизован, возвращаем на страницу входа
+                window.location.href = 'index.html';
+            }
+        });
+
+        window.saveProfile = async function() {
+            const user = auth.currentUser;
+            if (user) {
+                const nickname = document.getElementById('nickname').value;
+                const profilePicUrl = document.getElementById('profile-pic-url').value;
+                const description = document.getElementById('description').value;
+
+                // Сохраняем данные в Firestore
+                try {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        nickname: nickname || user.displayName,
+                        profilePicUrl: profilePicUrl || user.photoURL,
+                        description: description || '',
+                        uid: user.uid
+                    });
+                    // Перенаправляем на главную страницу
+                    window.location.href = 'main.html';
+                } catch (error) {
+                    console.error('Ошибка сохранения профиля:', error);
+                    alert('Ошибка при сохранении профиля: ' + error.message);
+                }
+            }
+        };
+    </script>
+</body>
+</html>
