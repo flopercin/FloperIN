@@ -110,6 +110,11 @@
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists() && userDoc.data().username) {
                     window.location.href = 'main.html';
+                } else {
+                    const usernameInput = document.getElementById('username');
+                    if (!usernameInput.value && user.displayName) {
+                        usernameInput.value = transliterate(user.displayName) || `user${user.uid.slice(0, 6)}`;
+                    }
                 }
             } else {
                 window.location.href = 'login.html';
@@ -126,9 +131,9 @@
             let usernameInput = document.getElementById('username').value.trim();
             const message = document.getElementById('message');
 
-            // Если поле пустое, генерируем из ника
-            if (!usernameInput && user.displayName) {
-                usernameInput = transliterate(user.displayName);
+            // Генерация, если пусто
+            if (!usernameInput) {
+                usernameInput = transliterate(user.displayName || '') || `user${user.uid.slice(0, 6)}`;
             }
 
             // Проверка валидности
