@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Профиль</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         body {
             margin: 0;
@@ -81,12 +82,13 @@
             border: 2px solid #fff;
             border-radius: 5px;
             color: #fff;
-            font-size: 16px;
-            padding: 5px 10px;
+            font-size: 20px;
+            padding: 8px;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        }
+        .nav-bar button.active {
+            background-color: #fff;
+            color: #000;
         }
     </style>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
@@ -108,13 +110,13 @@
         </div>
     </div>
     <div class="nav-bar">
-        <button title="Главное меню" onclick="window.location.href='main.html'"><span>🏠</span> Меню</button>
-        <button title="Поиск"><span>🔍</span> Поиск</button>
-        <button title="Люди"><span>👥</span> Люди</button>
-        <button title="Магазин"><span>🛒</span> Магазин</button>
-        <button class="active" title="Профиль"><span>👤</span> Профиль</button>
-        <button title="Настройки"><span>⚙️</span> Настройки</button>
-        <button title="Уведомления"><span>🔔</span> Уведомления</button>
+        <button title="Главное меню" onclick="window.location.href='main.html'"><i class="fas fa-home"></i></button>
+        <button title="Поиск"><i class="fas fa-search"></i></button>
+        <button title="Люди" onclick="window.location.href='people.html'"><i class="fas fa-users"></i></button>
+        <button title="Магазин"><i class="fas fa-store"></i></button>
+        <button class="active" title="Профиль"><i class="fas fa-user"></i></button>
+        <button title="Настройки"><i class="fas fa-cog"></i></button>
+        <button title="Уведомления"><i class="fas fa-bell"></i></button>
     </div>
 
     <script type="module">
@@ -140,7 +142,6 @@
             console.log('Auth state changed:', user);
             if (user) {
                 console.log('User UID:', user.uid);
-                // Загружаем данные из Firestore
                 try {
                     const userDocRef = doc(db, 'users', user.uid);
                     const userDoc = await getDoc(userDocRef);
@@ -151,9 +152,8 @@
                         document.getElementById('profile-pic').src = profilePicUrl;
                         document.getElementById('profile-pic-url').value = profilePicUrl;
                         document.getElementById('description').value = data.description || '';
-                        document.getElementById('friends-count').textContent = 0; // Пока друзей нет
+                        document.getElementById('friends-count').textContent = 0;
                     } else {
-                        // Если профиля нет, перенаправляем на страницу настройки
                         window.location.href = 'profile.html';
                     }
                 } catch (error) {
