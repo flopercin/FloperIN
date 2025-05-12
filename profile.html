@@ -47,6 +47,7 @@
             border-radius: 50%;
             margin: 10px auto;
             display: block;
+            cursor: pointer;
         }
         button {
             padding: 5px 20px;
@@ -60,14 +61,15 @@
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js"></script>
 </head>
 <body>
     <div class="header">FloperIN</div>
     <div class="container">
         <h2>Настройка профиля</h2>
-        <img id="profile-pic" src="" alt="Фото профиля">
+        <img id="profile-pic" src="" alt="Фото профиля" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" accept="image/*" style="display:none;" onchange="previewImage(event)">
         <input type="text" id="nickname" placeholder="Ник">
-        <input type="text" id="profile-pic-url" placeholder="URL фото профиля">
         <textarea id="description" placeholder="Описание"></textarea>
         <button onclick="saveProfile()">Сохранить</button>
     </div>
@@ -76,6 +78,7 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
         import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
@@ -90,33 +93,53 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        let selectedFile = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 // Загружаем данные из Google
                 document.getElementById('nickname').value = user.displayName || '';
                 document.getElementById('profile-pic').src = user.photoURL || '';
-                document.getElementById('profile-pic-url').value = user.photoURL || '';
+                document.getElementById('description').value = '';
 
                 // Проверяем, есть ли уже профиль в Firestore
                 const userDocRef = doc(db, 'users', user.uid);
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
-                    // Если профиль уже есть, перенаправляем на главную страницу
                     window.location.href = 'main.html';
                 }
             } else {
-                // Если пользователь не авторизован, возвращаем на страницу входа
                 window.location.href = 'index.html';
             }
         });
+
+        window.previewImage = function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profile-pic').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
 
         window.saveProfile = async function() {
             const user = auth.currentUser;
             if (user) {
                 const nickname = document.getElementById('nickname').value;
-                const profilePicUrl = document.getElementById('profile-pic-url').value;
                 const description = document.getElementById('description').value;
+                let profilePicUrl = user.photoURL;
+
+                // Если выбрано новое изображение, загружаем его в Storage
+                if (selectedFile) {
+                    const storageRef = ref(storage, `profile-pics/${user.uid}`);
+                    await uploadBytes(storageRef, selectedFile);
+                    profilePicUrl = await getDownloadURL(storageRef);
+                }
 
                 // Сохраняем данные в Firestore
                 try {
@@ -126,7 +149,6 @@
                         description: description || '',
                         uid: user.uid
                     });
-                    // Перенаправляем на главную страницу
                     window.location.href = 'main.html';
                 } catch (error) {
                     console.error('Ошибка сохранения профиля:', error);
