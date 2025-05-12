@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль пользователя</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+            color: #fff;
+        }
+        .header {
+            position: absolute;
+            top: 20px;
+            font-size: 36px;
+            font-weight: bold;
+            width: 100%;
+            text-align: center;
+        }
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin: 20px;
+            padding: 20px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        .profile-info {
+            border: 2px solid #fff;
+            padding: 20px;
+            border-radius: 10px;
+            width: 100%;
+        }
+        img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 10px auto;
+            display: block;
+        }
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: #333;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+        .nav-bar button {
+            background: none;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 20px;
+            padding: 8px;
+            cursor: pointer;
+        }
+        .nav-bar button.active {
+            background-color: #fff;
+            color: #000;
+        }
+    </style>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+</head>
+<body>
+    <div class="header">FloperIN</div>
+    <div class="container">
+        <div class="profile-info">
+            <h2 id="username"></h2>
+            <img id="profile-pic" src="" alt="Фото профиля">
+            <p id="description"></p>
+            <p>Друзья: <span id="friends-count">0</span></p>
+        </div>
+    </div>
+    <div class="nav-bar">
+        <button title="Главное меню" onclick="window.location.href='main.html'"><i class="fas fa-home"></i></button>
+        <button title="Поиск"><i class="fas fa-search"></i></button>
+        <button class="active" title="Люди" onclick="window.location.href='people.html'"><i class="fas fa-users"></i></button>
+        <button title="Магазин"><i class="fas fa-store"></i></button>
+        <button title="Профиль" onclick="window.location.href='user-profile.html'"><i class="fas fa-user"></i></button>
+        <button title="Настройки"><i class="fas fa-cog"></i></button>
+        <button title="Уведомления"><i class="fas fa-bell"></i></button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
+            authDomain: "floperin-559d7.firebaseapp.com",
+            projectId: "floperin-559d7",
+            storageBucket: "floperin-559d7.firebasestorage.app",
+            messagingSenderId: "313128941793",
+            appId: "1:313128941793:web:2a33815852477fa136dfa0",
+            measurementId: "G-LCZJLT5JJE"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const uid = urlParams.get('uid');
+                if (!uid) {
+                    window.location.href = 'people.html';
+                    return;
+                }
+
+                try {
+                    const userDocRef = doc(db, 'users', uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        document.getElementById('username').textContent = data.username || 'Без имени';
+                        document.getElementById('profile-pic').src = data.profilePicUrl || 'https://via.placeholder.com/100';
+                        document.getElementById('description').textContent = data.description || 'Нет описания';
+                        document.getElementById('friends-count').textContent = 0;
+                    } else {
+                        window.location.href = 'people.html';
+                    }
+                } catch (error) {
+                    console.error('Error loading profile:', error);
+                    window.location.href = 'people.html';
+                }
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+    </script>
+</body>
+</html>
