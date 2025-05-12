@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Профиль</title>
+    <title>Профиль пользователя</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
         body {
@@ -41,16 +41,6 @@
             padding: 20px;
             border-radius: 10px;
             width: 100%;
-        }
-        input, textarea {
-            display: block;
-            margin: 10px auto;
-            padding: 5px;
-            width: 80%;
-            background-color: #333;
-            color: #fff;
-            border: 1px solid #fff;
-            border-radius: 5px;
         }
         img {
             width: 100px;
@@ -90,6 +80,10 @@
             background-color: #fff;
             color: #000;
         }
+        .guest-message {
+            display: none;
+            color: #888;
+        }
     </style>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
@@ -99,34 +93,32 @@
     <div class="header">FloperIN</div>
     <div class="container">
         <div class="profile-info">
-            <h2>Профиль</h2>
-            <p id="display-name"></p>
+            <h2 id="display-name"></h2>
             <p id="username" style="color: #888;"></p>
             <img id="profile-pic" src="" alt="Фото профиля">
-            <input type="text" id="profile-pic-url" placeholder="URL фото профиля" oninput="updateImagePreview()">
-            <input type="text" id="nickname" placeholder="Ник">
-            <textarea id="description" placeholder="Описание"></textarea>
-            <p>Друзья: <span id="friends-count">0</span></p>
-            <button onclick="saveProfile()">Сохранить изменения</button>
-            <button onclick="logout()">Выйти из аккаунта</button>
-            <button id="change-username-btn" onclick="changeUsername()" style="display:none;">Сменить Username</button>
+            <p id="description"></p>
+            <p>Друзья: <span id="friends-count">0</span> <button onclick="viewFriends()">Посмотреть</button></p>
+            <button id="friend-action-btn">Отправить заявку</button>
+            <div class="guest-message" id="guest-message">
+                <p>Войдите, чтобы отправлять заявки или просматривать друзей.</p>
+                <button onclick="window.location.href='login.html'">Войти</button>
+            </div>
         </div>
     </div>
     <div class="nav-bar">
         <button title="Главное меню" onclick="window.location.href='main.html'"><i class="fas fa-home"></i></button>
-        <button title="Поиск"><i class="fas fa-search"></i></button>
-        <button title="Люди" onclick="window.location.href='people.html'"><i class="fas fa-users"></i></button>
+        <button title="Поиск" onclick="window.location.href='search.html'"><i class="fas fa-search"></i></button>
         <button title="Магазин"><i class="fas fa-store"></i></button>
         <button title="Чаты"><i class="fas fa-comments"></i></button>
-        <button class="active" title="Профиль"><i class="fas fa-user"></i></button>
-        <button title="Настройки"><i class="fas fa-cog"></i></button>
-        <button title="Уведомления"><i class="fas fa-bell"></i></button>
+        <button title="Профиль" onclick="window.location.href='user-profile.html'"><i class="fas fa-user"></i></button>
+        <button title="Настройки" onclick="window.location.href='settings.html'"><i class="fas fa-cog"></i></button>
+        <button title="Уведомления" onclick="window.location.href='notifications.html'"><i class="fas fa-bell"></i></button>
     </div>
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, Timestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+        import { getFirestore, doc, getDoc, collection, getDocs, query, where, setDoc, Timestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
@@ -141,127 +133,145 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
-        let lastUsernameChange = null;
+        let currentUserUid = null;
+        let uid = null; // Добавляем переменную для хранения uid из URL
 
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                try {
-                    const userDocRef = doc(db, 'users', user.uid);
-                    const userDoc = await getDoc(userDocRef);
-                    if (userDoc.exists()) {
-                        const data = userDoc.data();
-                        document.getElementById('display-name').textContent = data.nickname || user.displayName || '';
-                        document.getElementById('username').textContent = data.username ? `@${data.username}` : 'Нет Username';
-                        const profilePicUrl = data.profilePicUrl || user.photoURL || 'https://via.placeholder.com/100';
-                        document.getElementById('profile-pic').src = profilePicUrl;
-                        document.getElementById('profile-pic-url').value = profilePicUrl;
-                        document.getElementById('nickname').value = data.nickname || user.displayName || '';
-                        document.getElementById('description').value = data.description || '';
-                        document.getElementById('friends-count').textContent = data.friends ? data.friends.length : 0;
-                        lastUsernameChange = data.lastUsernameChange ? data.lastUsernameChange.toDate() : null;
-                        checkUsernameChangeAvailability();
-                    } else {
-                        window.location.href = 'profile.html';
-                    }
-                } catch (error) {
-                    console.error('Error loading profile:', error);
-                    alert('Ошибка при загрузке профиля: ' + error.message);
-                }
-            } else {
-                window.location.href = 'login.html';
-            }
-        });
-
-        window.updateImagePreview = function() {
-            const url = document.getElementById('profile-pic-url').value;
-            if (url) document.getElementById('profile-pic').src = url;
-            else document.getElementById('profile-pic').src = 'https://via.placeholder.com/100';
-        };
-
-        window.saveProfile = async function() {
-            const user = auth.currentUser;
-            if (user) {
-                const nickname = document.getElementById('nickname').value;
-                const description = document.getElementById('description').value;
-                const profilePicUrl = document.getElementById('profile-pic-url').value || user.photoURL || 'https://via.placeholder.com/100';
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDoc = await getDoc(userDocRef);
-                try {
-                    await setDoc(userDocRef, {
-                        nickname: nickname || user.displayName,
-                        profilePicUrl: profilePicUrl,
-                        description: description || '',
-                        uid: user.uid,
-                        username: userDoc.exists() ? userDoc.data().username : '',
-                        lastUsernameChange: userDoc.exists() ? userDoc.data().lastUsernameChange : null,
-                        friends: userDoc.exists() ? userDoc.data().friends || [] : []
-                    }, { merge: true });
-                    alert('Профиль успешно обновлён!');
-                } catch (error) {
-                    console.error('Error saving profile:', error);
-                    alert('Ошибка при сохранении профиля: ' + error.message);
-                }
-            }
-        };
-
-        window.logout = function() {
-            signOut(auth).then(() => window.location.href = 'login.html').catch((error) => {
-                console.error('Error signing out:', error);
-                alert('Ошибка при выходе: ' + error.message);
-            });
-        };
-
-        window.changeUsername = async function() {
-            const newUsername = prompt('Введите новый Username (только английские буквы и цифры, до 20 символов):');
-            if (!newUsername) return;
-
-            if (!/^[a-zA-Z0-9]{4,20}$/.test(newUsername)) {
-                alert('Username должен содержать только английские буквы и цифры, от 4 до 20 символов.');
+            currentUserUid = user ? user.uid : null;
+            const urlParams = new URLSearchParams(window.location.search);
+            uid = urlParams.get('uid'); // Получаем uid из URL
+            if (!uid) {
+                window.location.href = 'search.html';
                 return;
             }
 
-            const user = auth.currentUser;
-            if (user) {
-                const now = new Date();
-                if (lastUsernameChange && (now - lastUsernameChange) < 2 * 60 * 60 * 1000) {
-                    const timeLeft = Math.ceil((2 * 60 * 60 * 1000 - (now - lastUsernameChange)) / (60 * 1000));
-                    alert(`Вы можете сменить Username только раз в 2 часа. Ожидайте ${timeLeft} минут.`);
-                    return;
+            try {
+                const userDocRef = doc(db, 'users', uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    document.getElementById('display-name').textContent = data.nickname || 'Без имени';
+                    document.getElementById('username').textContent = data.username ? `@${data.username}` : 'Нет Username';
+                    document.getElementById('profile-pic').src = data.profilePicUrl || 'https://via.placeholder.com/100';
+                    document.getElementById('description').textContent = data.description || 'Нет описания';
+                    document.getElementById('friends-count').textContent = data.friends ? data.friends.length : 0;
+                    updateFriendButton(uid, data.friends || []);
+                    document.getElementById('guest-message').style.display = user ? 'none' : 'block';
+                } else {
+                    window.location.href = 'search.html';
                 }
-
-                const usernamesRef = collection(db, 'usernames');
-                const q = query(usernamesRef, where('username', '==', newUsername));
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    alert('Этот Username уже занят.');
-                    return;
-                }
-
-                try {
-                    const userDocRef = doc(db, 'users', user.uid);
-                    const oldUsernameDocRef = querySnapshot.empty ? null : doc(db, 'usernames', (await getDoc(userDocRef)).data().username);
-                    await setDoc(userDocRef, { username: newUsername, lastUsernameChange: Timestamp.now() }, { merge: true });
-                    if (oldUsernameDocRef) await deleteDoc(oldUsernameDocRef);
-                    await setDoc(doc(db, 'usernames', newUsername), { uid: user.uid, username: newUsername });
-                    alert('Username успешно изменён!');
-                    location.reload();
-                } catch (error) {
-                    console.error('Error changing username:', error);
-                    alert('Ошибка при смене Username: ' + error.message);
-                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                window.location.href = 'search.html';
             }
-        };
+        });
 
-        function checkUsernameChangeAvailability() {
-            const btn = document.getElementById('change-username-btn');
-            const now = new Date();
-            if (lastUsernameChange && (now - lastUsernameChange) < 2 * 60 * 60 * 1000) {
+        function updateFriendButton(targetUid, targetFriends) {
+            const btn = document.getElementById('friend-action-btn');
+            const guestMessage = document.getElementById('guest-message');
+            if (!currentUserUid) {
                 btn.style.display = 'none';
+                guestMessage.style.display = 'block';
+                return;
+            }
+
+            if (currentUserUid === targetUid) {
+                btn.textContent = 'Это вы';
+                btn.disabled = true;
+                btn.style.display = 'block';
+                return;
+            }
+
+            if (targetFriends.includes(currentUserUid)) {
+                btn.textContent = 'Ваш друг';
+                btn.onclick = () => showFriendOptions(targetUid);
+                btn.style.display = 'block';
             } else {
+                btn.textContent = 'Отправить заявку';
+                btn.onclick = () => sendFriendRequest(targetUid);
                 btn.style.display = 'block';
             }
         }
+
+        async function sendFriendRequest(targetUid) {
+            if (!currentUserUid) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const currentUserDocRef = doc(db, 'users', currentUserUid);
+            const currentUserDoc = await getDoc(currentUserDocRef);
+            const currentUserData = currentUserDoc.data();
+            const targetUserDocRef = doc(db, 'users', targetUid);
+            const targetUserDoc = await getDoc(targetUserDocRef);
+            const targetUserData = targetUserDoc.data();
+
+            if (!currentUserData.username || !targetUserData.username) {
+                alert('У вас или у пользователя нет Username.');
+                return;
+            }
+
+            const notificationRef = doc(collection(db, 'notifications', targetUid, 'list'));
+            await setDoc(notificationRef, {
+                type: 'friend_request',
+                fromUid: currentUserUid,
+                fromUsername: currentUserData.username,
+                timestamp: Timestamp.now(),
+                status: 'pending'
+            });
+
+            alert('Заявка отправлена!');
+        }
+
+        function showFriendOptions(targetUid) {
+            const options = prompt('Выберите действие:\n1. Удалить друга\n2. Написать\nВведите номер (1 или 2):');
+            if (options === '1') {
+                removeFriend(targetUid);
+            } else if (options === '2') {
+                alert('Функция чатов пока не реализована.');
+            }
+        }
+
+        async function removeFriend(targetUid) {
+            const currentUserDocRef = doc(db, 'users', currentUserUid);
+            const currentUserDoc = await getDoc(currentUserDocRef);
+            const currentUserData = currentUserDoc.data();
+            const targetUserDocRef = doc(db, 'users', targetUid);
+            const targetUserDoc = await getDoc(targetUserDocRef);
+            const targetUserData = targetUserDoc.data();
+
+            if (currentUserData.friends && currentUserData.friends.includes(targetUid)) {
+                await setDoc(currentUserDocRef, { friends: currentUserData.friends.filter(uid => uid !== targetUid) }, { merge: true });
+            }
+            if (targetUserData.friends && targetUserData.friends.includes(currentUserUid)) {
+                await setDoc(targetUserDocRef, { friends: targetUserData.friends.filter(uid => uid !== currentUserUid) }, { merge: true });
+            }
+            alert('Друг удалён!');
+            location.reload();
+        }
+
+        window.viewFriends = async function() {
+            if (!currentUserUid) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const userDocRef = doc(db, 'users', currentUserUid === uid ? currentUserUid : uid);
+            const userDoc = await getDoc(userDocRef);
+            const friends = userDoc.data().friends || [];
+            if (friends.length === 0) {
+                alert('У этого пользователя нет друзей.');
+                return;
+            }
+            const friendDetails = await Promise.all(friends.map(async (friendUid) => {
+                const friendDoc = await getDoc(doc(db, 'users', friendUid));
+                return friendDoc.exists() ? `@${friendDoc.data().username || 'Нет Username'}` : null;
+            }));
+            const validFriends = friendDetails.filter(f => f).join('\n');
+            const friendList = prompt('Друзья:\n' + validFriends + '\nВыберите друга (введите индекс):', '0');
+            const index = parseInt(friendList);
+            if (index >= 0 && index < friends.length) {
+                window.location.href = `public-profile.html?uid=${friends[index]}`;
+            }
+        };
     </script>
 </body>
 </html>
