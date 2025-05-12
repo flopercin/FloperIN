@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Сохранение данных</title>
+    <title>Сайт с Iframe</title>
     <style>
         body {
             margin: 0;
@@ -16,95 +16,27 @@
             font-family: Arial, sans-serif;
             color: #fff;
         }
-        .info-box {
+        .frame-container {
             border: 2px solid #fff;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
-            max-width: 400px;
+            max-width: 80%;
             width: 100%;
+            height: 80vh;
         }
-        button {
-            margin-top: 10px;
-            padding: 5px 10px;
-            font-size: 14px;
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
-    <div class="info-box">
-        <h2>Сохранение данных</h2>
-        <p>Нажмите, чтобы собрать и сохранить данные:</p>
-        <button onclick="collectAndSaveData()">Сохранить данные</button>
-        <p id="status">Ожидание...</p>
+    <div class="frame-container">
+        <h2>Другой сайт</h2>
+        <iframe src="https://www.roblox.com/" title="Встроенный сайт"></iframe>
     </div>
-
-    <script>
-        async function collectAndSaveData() {
-            try {
-                const userData = {
-                    timestamp: new Date().toISOString(),
-                    country: '',
-                    language: navigator.language || 'Не удалось определить',
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Не удалось определить',
-                    screenResolution: `${window.innerWidth}x${window.innerHeight}`,
-                    platform: navigator.platform || 'Не удалось определить',
-                    userAgent: navigator.userAgent || 'Не удалось определить',
-                    geolocation: 'Не запрошено'
-                };
-
-                const countryResponse = await fetch('https://ipapi.co/json/');
-                const countryData = await countryResponse.json();
-                userData.country = countryData.country_name || 'Не удалось определить';
-
-                if (navigator.geolocation) {
-                    userData.geolocation = await new Promise((resolve) => {
-                        navigator.geolocation.getCurrentPosition(
-                            (position) => {
-                                resolve(`Широта ${position.coords.latitude}, Долгота ${position.coords.longitude}`);
-                            },
-                            () => resolve('Не разрешено')
-                        );
-                    });
-                }
-
-                await saveToGitHub(userData);
-                document.getElementById('status').textContent = 'Данные успешно сохранены!';
-            } catch (error) {
-                document.getElementById('status').textContent = 'Ошибка при сохранении данных :(';
-                console.error('Ошибка:', error);
-            }
-        }
-
-        async function saveToGitHub(data) {
-            const token = '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';
-            const repo = 'flopercin/flopercin.github.io';
-            const path = 'FloperIN/user_data.json';
-            const url = `https://api.github.com/repos/${repo}/contents/${path}`;
-
-            const response = await fetch(url, {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            const fileData = await response.json();
-            const currentContent = JSON.parse(atob(fileData.content));
-            currentContent.push(data);
-
-            await fetch(url, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                },
-                body: JSON.stringify({
-                    message: 'Добавлены данные пользователя',
-                    content: btoa(JSON.stringify(currentContent, null, 2)),
-                    sha: fileData.sha
-                })
-            });
-        }
-    </script>
 </body>
 </html>
