@@ -100,7 +100,8 @@
     <div class="container">
         <div class="profile-info">
             <h2>Профиль</h2>
-            <p>Username: <span id="username"></span></p>
+            <p id="display-name"></p>
+            <p id="username" style="color: #888;"></p>
             <img id="profile-pic" src="" alt="Фото профиля">
             <input type="text" id="profile-pic-url" placeholder="URL фото профиля" oninput="updateImagePreview()">
             <input type="text" id="nickname" placeholder="Ник">
@@ -108,6 +109,7 @@
             <p>Друзья: <span id="friends-count">0</span></p>
             <button onclick="saveProfile()">Сохранить изменения</button>
             <button onclick="logout()">Выйти из аккаунта</button>
+            <button id="change-username-btn" onclick="changeUsername()" style="display:none;">Сменить Username</button>
         </div>
     </div>
     <div class="nav-bar">
@@ -115,6 +117,7 @@
         <button title="Поиск"><i class="fas fa-search"></i></button>
         <button title="Люди" onclick="window.location.href='people.html'"><i class="fas fa-users"></i></button>
         <button title="Магазин"><i class="fas fa-store"></i></button>
+        <button title="Чаты"><i class="fas fa-comments"></i></button>
         <button class="active" title="Профиль"><i class="fas fa-user"></i></button>
         <button title="Настройки"><i class="fas fa-cog"></i></button>
         <button title="Уведомления"><i class="fas fa-bell"></i></button>
@@ -123,7 +126,7 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
         import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-        import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, Timestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
@@ -139,22 +142,25 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        let lastUsernameChange = null;
+
         onAuthStateChanged(auth, async (user) => {
-            console.log('Auth state changed:', user);
             if (user) {
-                console.log('User UID:', user.uid);
                 try {
                     const userDocRef = doc(db, 'users', user.uid);
                     const userDoc = await getDoc(userDocRef);
                     if (userDoc.exists()) {
                         const data = userDoc.data();
-                        document.getElementById('username').textContent = data.username || 'Нет имени';
-                        document.getElementById('nickname').value = data.nickname || user.displayName || '';
+                        document.getElementById('display-name').textContent = data.nickname || user.displayName || '';
+                        document.getElementById('username').textContent = data.username ? `@${data.username}` : 'Нет Username';
                         const profilePicUrl = data.profilePicUrl || user.photoURL || 'https://via.placeholder.com/100';
                         document.getElementById('profile-pic').src = profilePicUrl;
                         document.getElementById('profile-pic-url').value = profilePicUrl;
+                        document.getElementById('nickname').value = data.nickname || user.displayName || '';
                         document.getElementById('description').value = data.description || '';
-                        document.getElementById('friends-count').textContent = 0;
+                        document.getElementById('friends-count').textContent = data.friends ? data.friends.length : 0;
+                        lastUsernameChange = data.lastUsernameChange ? data.lastUsernameChange.toDate() : null;
+                        checkUsernameChangeAvailability();
                     } else {
                         window.location.href = 'profile.html';
                     }
@@ -163,63 +169,99 @@
                     alert('Ошибка при загрузке профиля: ' + error.message);
                 }
             } else {
-                console.log('No user, redirecting to login.html');
                 window.location.href = 'login.html';
             }
         });
 
         window.updateImagePreview = function() {
             const url = document.getElementById('profile-pic-url').value;
-            console.log('Updating image preview with URL:', url);
-            if (url) {
-                document.getElementById('profile-pic').src = url;
-            } else {
-                document.getElementById('profile-pic').src = 'https://via.placeholder.com/100';
-            }
+            if (url) document.getElementById('profile-pic').src = url;
+            else document.getElementById('profile-pic').src = 'https://via.placeholder.com/100';
         };
 
         window.saveProfile = async function() {
             const user = auth.currentUser;
             if (user) {
-                console.log('Saving profile for user:', user.uid);
                 const nickname = document.getElementById('nickname').value;
                 const description = document.getElementById('description').value;
                 const profilePicUrl = document.getElementById('profile-pic-url').value || user.photoURL || 'https://via.placeholder.com/100';
-
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDoc = await getDoc(userDocRef);
                 try {
-                    console.log('Saving to Firestore');
-                    const userDocRef = doc(db, 'users', user.uid);
-                    const userDoc = await getDoc(userDocRef);
                     await setDoc(userDocRef, {
-                        username: userDoc.exists() ? userDoc.data().username : '', // Сохраняем существующий Username
                         nickname: nickname || user.displayName,
                         profilePicUrl: profilePicUrl,
                         description: description || '',
-                        uid: user.uid
+                        uid: user.uid,
+                        username: userDoc.exists() ? userDoc.data().username : '',
+                        lastUsernameChange: userDoc.exists() ? userDoc.data().lastUsernameChange : null,
+                        friends: userDoc.exists() ? userDoc.data().friends || [] : []
                     }, { merge: true });
-                    console.log('Profile saved');
                     alert('Профиль успешно обновлён!');
                 } catch (error) {
                     console.error('Error saving profile:', error);
                     alert('Ошибка при сохранении профиля: ' + error.message);
                 }
-            } else {
-                console.log('No user found for saving profile');
-                alert('Пользователь не авторизован');
             }
         };
 
         window.logout = function() {
-            signOut(auth)
-                .then(() => {
-                    console.log('User signed out');
-                    window.location.href = 'login.html';
-                })
-                .catch((error) => {
-                    console.error('Error signing out:', error);
-                    alert('Ошибка при выходе: ' + error.message);
-                });
+            signOut(auth).then(() => window.location.href = 'login.html').catch((error) => {
+                console.error('Error signing out:', error);
+                alert('Ошибка при выходе: ' + error.message);
+            });
         };
+
+        window.changeUsername = async function() {
+            const newUsername = prompt('Введите новый Username (только английские буквы и цифры, до 20 символов):');
+            if (!newUsername) return;
+
+            if (!/^[a-zA-Z0-9]{4,20}$/.test(newUsername)) {
+                alert('Username должен содержать только английские буквы и цифры, от 4 до 20 символов.');
+                return;
+            }
+
+            const user = auth.currentUser;
+            if (user) {
+                const now = new Date();
+                if (lastUsernameChange && (now - lastUsernameChange) < 2 * 60 * 60 * 1000) {
+                    const timeLeft = Math.ceil((2 * 60 * 60 * 1000 - (now - lastUsernameChange)) / (60 * 1000));
+                    alert(`Вы можете сменить Username только раз в 2 часа. Ожидайте ${timeLeft} минут.`);
+                    return;
+                }
+
+                const usernamesRef = collection(db, 'usernames');
+                const q = query(usernamesRef, where('username', '==', newUsername));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    alert('Этот Username уже занят.');
+                    return;
+                }
+
+                try {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const oldUsernameDocRef = querySnapshot.empty ? null : doc(db, 'usernames', (await getDoc(userDocRef)).data().username);
+                    await setDoc(userDocRef, { username: newUsername, lastUsernameChange: Timestamp.now() }, { merge: true });
+                    if (oldUsernameDocRef) await deleteDoc(oldUsernameDocRef);
+                    await setDoc(doc(db, 'usernames', newUsername), { uid: user.uid, username: newUsername });
+                    alert('Username успешно изменён!');
+                    location.reload();
+                } catch (error) {
+                    console.error('Error changing username:', error);
+                    alert('Ошибка при смене Username: ' + error.message);
+                }
+            }
+        };
+
+        function checkUsernameChangeAvailability() {
+            const btn = document.getElementById('change-username-btn');
+            const now = new Date();
+            if (lastUsernameChange && (now - lastUsernameChange) < 2 * 60 * 60 * 1000) {
+                btn.style.display = 'none';
+            } else {
+                btn.style.display = 'block';
+            }
+        }
     </script>
 </body>
 </html>
