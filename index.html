@@ -10,11 +10,18 @@
             padding: 0;
             height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             background-color: #000;
             font-family: Arial, sans-serif;
             color: #fff;
+        }
+        .header {
+            position: absolute;
+            top: 20px;
+            font-size: 36px;
+            font-weight: bold;
         }
         .container {
             border: 2px solid #fff;
@@ -33,6 +40,7 @@
     <script src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
+    <div class="header">FloperIN</div>
     <div class="container">
         <h2>Вход через Google</h2>
         <div id="g_id_onload"
@@ -75,6 +83,8 @@
             if (user) {
                 document.getElementById('message').textContent = `Вы вошли как: ${user.displayName} (${user.uid})`;
                 document.getElementById('logout').style.display = 'block';
+                // Перенаправляем на страницу профиля после входа
+                window.location.href = 'profile.html';
             } else {
                 document.getElementById('message').textContent = 'Вы не вошли';
                 document.getElementById('logout').style.display = 'none';
