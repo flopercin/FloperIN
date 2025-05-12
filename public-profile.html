@@ -49,6 +49,15 @@
             margin: 10px auto;
             display: block;
         }
+        button {
+            padding: 5px 20px;
+            background: none;
+            color: #fff;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
         .nav-bar {
             position: fixed;
             bottom: 0;
@@ -71,6 +80,10 @@
             background-color: #fff;
             color: #000;
         }
+        .guest-message {
+            display: none;
+            color: #888;
+        }
     </style>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
     <script type="module" src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
@@ -80,26 +93,32 @@
     <div class="header">FloperIN</div>
     <div class="container">
         <div class="profile-info">
-            <h2 id="username"></h2>
+            <h2 id="display-name"></h2>
+            <p id="username" style="color: #888;"></p>
             <img id="profile-pic" src="" alt="Фото профиля">
             <p id="description"></p>
-            <p>Друзья: <span id="friends-count">0</span></p>
+            <p>Друзья: <span id="friends-count">0</span> <button onclick="viewFriends()">Посмотреть</button></p>
+            <button id="friend-action-btn">Отправить заявку</button>
+            <div class="guest-message" id="guest-message">
+                <p>Войдите, чтобы отправлять заявки или просматривать друзей.</p>
+                <button onclick="window.location.href='login.html'">Войти</button>
+            </div>
         </div>
     </div>
     <div class="nav-bar">
         <button title="Главное меню" onclick="window.location.href='main.html'"><i class="fas fa-home"></i></button>
-        <button title="Поиск"><i class="fas fa-search"></i></button>
-        <button class="active" title="Люди" onclick="window.location.href='people.html'"><i class="fas fa-users"></i></button>
+        <button title="Поиск" onclick="window.location.href='search.html'"><i class="fas fa-search"></i></button>
         <button title="Магазин"><i class="fas fa-store"></i></button>
+        <button title="Чаты"><i class="fas fa-comments"></i></button>
         <button title="Профиль" onclick="window.location.href='user-profile.html'"><i class="fas fa-user"></i></button>
         <button title="Настройки"><i class="fas fa-cog"></i></button>
-        <button title="Уведомления"><i class="fas fa-bell"></i></button>
+        <button title="Уведомления" onclick="window.location.href='notifications.html'"><i class="fas fa-bell"></i></button>
     </div>
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-        import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+        import { getFirestore, doc, getDoc, collection, getDocs, query, where, setDoc, Timestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCmv0bj3l2fDUQe6-xzlkpEu5r_Qdbpm7w",
@@ -114,36 +133,140 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        let currentUserUid = null;
 
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const uid = urlParams.get('uid');
-                if (!uid) {
-                    window.location.href = 'people.html';
-                    return;
-                }
+            currentUserUid = user ? user.uid : null;
+            const urlParams = new URLSearchParams(window.location.search);
+            const uid = urlParams.get('uid');
+            if (!uid) {
+                window.location.href = 'search.html';
+                return;
+            }
 
-                try {
-                    const userDocRef = doc(db, 'users', uid);
-                    const userDoc = await getDoc(userDocRef);
-                    if (userDoc.exists()) {
-                        const data = userDoc.data();
-                        document.getElementById('username').textContent = data.username || 'Без имени';
-                        document.getElementById('profile-pic').src = data.profilePicUrl || 'https://via.placeholder.com/100';
-                        document.getElementById('description').textContent = data.description || 'Нет описания';
-                        document.getElementById('friends-count').textContent = 0;
-                    } else {
-                        window.location.href = 'people.html';
-                    }
-                } catch (error) {
-                    console.error('Error loading profile:', error);
-                    window.location.href = 'people.html';
+            try {
+                const userDocRef = doc(db, 'users', uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    document.getElementById('display-name').textContent = data.nickname || 'Без имени';
+                    document.getElementById('username').textContent = data.username ? `@${data.username}` : 'Нет Username';
+                    document.getElementById('profile-pic').src = data.profilePicUrl || 'https://via.placeholder.com/100';
+                    document.getElementById('description').textContent = data.description || 'Нет описания';
+                    document.getElementById('friends-count').textContent = data.friends ? data.friends.length : 0;
+                    updateFriendButton(uid, data.friends || []);
+                    document.getElementById('guest-message').style.display = user ? 'none' : 'block';
+                } else {
+                    window.location.href = 'search.html';
                 }
-            } else {
-                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                window.location.href = 'search.html';
             }
         });
+
+        function updateFriendButton(targetUid, targetFriends) {
+            const btn = document.getElementById('friend-action-btn');
+            const guestMessage = document.getElementById('guest-message');
+            if (!currentUserUid) {
+                btn.style.display = 'none';
+                guestMessage.style.display = 'block';
+                return;
+            }
+
+            if (currentUserUid === targetUid) {
+                btn.textContent = 'Это вы';
+                btn.disabled = true;
+                btn.style.display = 'block';
+                return;
+            }
+
+            if (targetFriends.includes(currentUserUid)) {
+                btn.textContent = 'Ваш друг';
+                btn.onclick = () => showFriendOptions(targetUid);
+                btn.style.display = 'block';
+            } else {
+                btn.textContent = 'Отправить заявку';
+                btn.onclick = () => sendFriendRequest(targetUid);
+                btn.style.display = 'block';
+            }
+        }
+
+        async function sendFriendRequest(targetUid) {
+            if (!currentUserUid) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const currentUserDocRef = doc(db, 'users', currentUserUid);
+            const currentUserDoc = await getDoc(currentUserDocRef);
+            const currentUserData = currentUserDoc.data();
+            const targetUserDocRef = doc(db, 'users', targetUid);
+            const targetUserDoc = await getDoc(targetUserDocRef);
+            const targetUserData = targetUserDoc.data();
+
+            if (!currentUserData.username || !targetUserData.username) {
+                alert('У вас или у пользователя нет Username.');
+                return;
+            }
+
+            const notificationRef = doc(collection(db, 'notifications', targetUid, 'list'));
+            await setDoc(notificationRef, {
+                type: 'friend_request',
+                fromUid: currentUserUid,
+                fromUsername: currentUserData.username,
+                timestamp: Timestamp.now(),
+                status: 'pending'
+            });
+
+            alert('Заявка отправлена!');
+        }
+
+        function showFriendOptions(targetUid) {
+            const options = prompt('Выберите действие:\n1. Удалить друга\n2. Написать\nВведите номер (1 или 2):');
+            if (options === '1') {
+                removeFriend(targetUid);
+            } else if (options === '2') {
+                alert('Функция чатов пока не реализована.');
+            }
+        }
+
+        async function removeFriend(targetUid) {
+            const currentUserDocRef = doc(db, 'users', currentUserUid);
+            const currentUserDoc = await getDoc(currentUserDocRef);
+            const currentUserData = currentUserDoc.data();
+            const targetUserDocRef = doc(db, 'users', targetUid);
+            const targetUserDoc = await getDoc(targetUserDocRef);
+            const targetUserData = targetUserDoc.data();
+
+            if (currentUserData.friends && currentUserData.friends.includes(targetUid)) {
+                await setDoc(currentUserDocRef, { friends: currentUserData.friends.filter(uid => uid !== targetUid) }, { merge: true });
+            }
+            if (targetUserData.friends && targetUserData.friends.includes(currentUserUid)) {
+                await setDoc(targetUserDocRef, { friends: targetUserData.friends.filter(uid => uid !== currentUserUid) }, { merge: true });
+            }
+            alert('Друг удалён!');
+            location.reload();
+        }
+
+        window.viewFriends = function() {
+            if (!currentUserUid) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const userDocRef = doc(db, 'users', currentUserUid);
+            getDoc(userDocRef).then((doc) => {
+                const friends = doc.data().friends || [];
+                if (friends.length === 0) {
+                    alert('У вас нет друзей.');
+                    return;
+                }
+                const friendList = prompt('Ваши друзья:\n' + friends.map(uid => `@[Username for ${uid}]`).join('\n') + '\nВыберите друга (введите индекс):', '0');
+                const index = parseInt(friendList);
+                if (index >= 0 && index < friends.length) {
+                    window.location.href = `public-profile.html?uid=${friends[index]}`;
+                }
+            });
+        };
     </script>
 </body>
 </html>
